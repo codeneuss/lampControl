@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LampControl">
+    <title>LampControl - ELK-BLEDOM Controller</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%230a84ff;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%235ac8fa;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23grad)' opacity='0.2'/%3E%3Cpath d='M50 20 L50 45 M35 50 L65 50' stroke='url(%23grad)' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='65' r='12' fill='url(%23grad)'/%3E%3Cpath d='M42 77 L58 77' stroke='url(%23grad)' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-brand">
+                <svg class="app-logo" width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#0a84ff;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#5ac8fa;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="45" fill="url(#logoGrad)" opacity="0.15"/>
+                    <path d="M50 20 L50 45 M35 50 L65 50" stroke="url(#logoGrad)" stroke-width="7" stroke-linecap="round"/>
+                    <circle cx="50" cy="65" r="13" fill="url(#logoGrad)"/>
+                    <path d="M40 80 L60 80" stroke="url(#logoGrad)" stroke-width="5" stroke-linecap="round"/>
+                </svg>
+                <h1>LampControl</h1>
+            </div>
+            <div id="connection-status" class="status disconnected">
+                <span class="status-dot"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Device Selection Panel -->
+        <section class="panel" id="device-panel">
+            <h2>Device Selection</h2>
+            <div class="device-controls">
+                <button id="scan-btn" class="btn btn-primary">
+                    <span class="btn-icon">🔍</span>
+                    Scan for Devices
+                </button>
+                <div id="scan-status" class="scan-status hidden"></div>
+            </div>
+            <div id="device-list" class="device-list"></div>
+            <div id="selected-device" class="selected-device"></div>
+        </section>
+
+        <!-- Control Panel -->
+        <section class="panel" id="control-panel">
+            <h2>Lamp Control</h2>
+
+            <div id="no-device-message" class="message info">
+                Select a device to start controlling your lamp
+            </div>
+
+            <div id="controls" class="hidden">
+                <!-- Power Toggle -->
+                <div class="control-group power-control">
+                    <button id="power-btn" class="power-btn off">
+                        <span class="power-icon">⚡</span>
+                        <span class="power-text">Power Off</span>
+                    </button>
+                </div>
+
+                <!-- Brightness Slider -->
+                <div class="control-group">
+                    <label for="brightness-slider">
+                        Brightness
+                        <span id="brightness-value" class="value-display">100%</span>
+                    </label>
+                    <input type="range" id="brightness-slider" min="0" max="255" value="255" class="slider">
+                </div>
+
+                <!-- Mode Selector -->
+                <div class="control-group">
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" data-mode="color">Color</button>
+                        <button class="mode-tab" data-mode="white">White</button>
+                        <button class="mode-tab" data-mode="effects">Effects</button>
+                    </div>
+                </div>
+
+                <!-- Color Mode -->
+                <div id="color-mode" class="mode-content active">
+                    <div class="color-picker-container">
+                        <canvas id="color-picker" width="300" height="300"></canvas>
+                        <div id="color-preview"></div>
+                    </div>
+                    <div class="color-sliders">
+                        <div class="slider-group red">
+                            <label for="red-slider">
+                                Red
+                                <span id="red-value" class="value-display">255</span>
+                            </label>
+                            <input type="range" id="red-slider" min="0" max="255" value="255" class="slider">
+                        </div>
+                        <div class="slider-group green">
+                            <label for="green-slider">
+                                Green
+                                <span id="green-value" class="value-display">0</span>
+                            </label>
+                            <input type="range" id="green-slider" min="0" max="255" value="0" class="slider">
+                        </div>
+                        <div class="slider-group blue">
+                            <label for="blue-slider">
+                                Blue
+                                <span id="blue-value" class="value-display">0</span>
+                            </label>
+                            <input type="range" id="blue-slider" min="0" max="255" value="0" class="slider">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- White Balance Mode -->
+                <div id="white-mode" class="mode-content">
+                    <div class="slider-group warm">
+                        <label for="warm-slider">
+                            Warm White
+                            <span id="warm-value" class="value-display">128</span>
+                        </label>
+                        <input type="range" id="warm-slider" min="0" max="255" value="128" class="slider">
+                    </div>
+                    <div class="slider-group cold">
+                        <label for="cold-slider">
+                            Cold White
+                            <span id="cold-value" class="value-display">128</span>
+                        </label>
+                        <input type="range" id="cold-slider" min="0" max="255" value="128" class="slider">
+                    </div>
+                </div>
+
+                <!-- Effects Mode -->
+                <div id="effects-mode" class="mode-content">
+                    <div id="effects-gallery" class="effects-gallery"></div>
+                    <div class="slider-group">
+                        <label for="effect-speed-slider">
+                            Effect Speed
+                            <span id="effect-speed-value" class="value-display">128</span>
+                        </label>
+                        <input type="range" id="effect-speed-slider" min="0" max="255" value="128" class="slider">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Display -->
+        <div id="error-display" class="message error hidden"></div>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
