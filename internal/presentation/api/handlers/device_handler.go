@@ -45,6 +45,8 @@ func (h *DeviceHandler) ListDevices(w http.ResponseWriter, r *http.Request) {
 
 // ScanDevices handles POST /api/scan
 func (h *DeviceHandler) ScanDevices(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var req dto.ScanRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		// Use default timeout if not provided
@@ -62,7 +64,10 @@ func (h *DeviceHandler) ScanDevices(w http.ResponseWriter, r *http.Request) {
 	devices, err := h.state.GetDeviceService().Scan(ctx, timeout)
 	if err != nil {
 		log.Printf("Scan failed: %v", err)
-		http.Error(w, "Scan failed", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Scan failed",
+		})
 		return
 	}
 
@@ -71,34 +76,51 @@ func (h *DeviceHandler) ScanDevices(w http.ResponseWriter, r *http.Request) {
 	// Broadcast scan results to WebSocket clients
 	h.state.GetWebSocketHub().BroadcastMessage(dto.NewScanResultMessage(deviceDTOs))
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(deviceDTOs)
 }
 
 // SelectDevice handles POST /api/device/select
 func (h *DeviceHandler) SelectDevice(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var req dto.SelectDeviceRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Invalid request body",
+		})
 		return
 	}
 
 	if req.Address == "" {
-		http.Error(w, "Device address is required", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Device address is required",
+		})
 		return
 	}
 
 	// Select the device
 	if err := h.state.SelectDevice(req.Address); err != nil {
 		log.Printf("Failed to select device: %v", err)
-		http.Error(w, "Device not found", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Device not found",
+		})
 		return
 	}
 
 	// Get the selected device
 	device, err := h.state.GetSelectedDevice()
 	if err != nil {
-		http.Error(w, "Failed to get device", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to get device",
+		})
 		return
 	}
 
@@ -107,7 +129,6 @@ func (h *DeviceHandler) SelectDevice(w http.ResponseWriter, r *http.Request) {
 	// Broadcast state update to WebSocket clients
 	h.state.BroadcastState()
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"device":  deviceDTO,
@@ -116,14 +137,17 @@ func (h *DeviceHandler) SelectDevice(w http.ResponseWriter, r *http.Request) {
 
 // GetCurrentDevice handles GET /api/device/current
 func (h *DeviceHandler) GetCurrentDevice(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	device, err := h.state.GetSelectedDevice()
 	if err != nil {
-		http.Error(w, "No device selected", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "No device selected",
+		})
 		return
 	}
 
 	deviceDTO := dto.FromDomain(device)
-
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(deviceDTO)
 }

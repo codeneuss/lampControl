@@ -90,10 +90,7 @@ func (a *Adapter) Scan(ctx context.Context, timeout time.Duration) ([]ScanResult
 		return nil, fmt.Errorf("%w: %v", ErrScanFailed, err)
 	}
 
-	if len(results) == 0 {
-		return nil, ErrNoDevicesFound
-	}
-
+	// Return empty array if no devices found (not an error)
 	return results, nil
 }
 
@@ -147,7 +144,7 @@ func (a *Adapter) Connect(ctx context.Context, address string, timeout time.Dura
 					fmt.Println("NOTIFY:", hex.EncodeToString(buf))
 				})
 				fmt.Println("    ✓ NOTIFY ENABLED!")
-				time.Sleep(200 * time.Millisecond) // Handshake warten
+				time.Sleep(50 * time.Millisecond) // Brief handshake wait
 			}
 
 			if j == 1 {
@@ -175,11 +172,11 @@ func (a *Adapter) Write(ctx context.Context, conn *Connection, data []byte) erro
 			return fmt.Errorf("%w: %v", ErrWriteFailed, err)
 		}
 		fmt.Println("Write", i+1, "OK")
-		time.Sleep(100 * time.Millisecond) // Länger warten
+		time.Sleep(20 * time.Millisecond) // Small delay between writes
 	}
 
-	fmt.Println("✓ All writes successful! (wait 1s for effect)")
-	time.Sleep(1 * time.Second) // Lampe braucht Zeit
+	fmt.Println("✓ All writes successful!")
+	time.Sleep(50 * time.Millisecond) // Minimal delay for effect
 	return nil
 }
 

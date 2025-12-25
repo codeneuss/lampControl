@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/codeneuss/lampcontrol/internal/infrastructure/storage"
 	"github.com/codeneuss/lampcontrol/internal/presentation/api/handlers"
 	"github.com/codeneuss/lampcontrol/internal/presentation/api/middleware"
 	"github.com/codeneuss/lampcontrol/internal/presentation/api/state"
@@ -19,14 +20,18 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	httpServer *http.Server
-	state      *state.ServerState
+	httpServer    *http.Server
+	state         *state.ServerState
+	effectStorage *storage.EffectStorage
+	twitchStorage *storage.TwitchStorage
 }
 
 // NewServer creates a new HTTP server
-func NewServer(host string, port int, serverState *state.ServerState) *Server {
+func NewServer(host string, port int, serverState *state.ServerState, effectStorage *storage.EffectStorage, twitchStorage *storage.TwitchStorage) *Server {
 	server := &Server{
-		state: serverState,
+		state:         serverState,
+		effectStorage: effectStorage,
+		twitchStorage: twitchStorage,
 	}
 
 	// Create router
@@ -56,6 +61,8 @@ func (s *Server) setupRouter() http.Handler {
 	// Create handlers
 	deviceHandler := handlers.NewDeviceHandler(s.state)
 	wsHandler := handlers.NewWebSocketHandler(s.state)
+	effectHandler := handlers.NewEffectHandler(s.effectStorage)
+	twitchHandler := handlers.NewTwitchHandler(s.state.GetTwitchService(), s.twitchStorage)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -64,6 +71,18 @@ func (s *Server) setupRouter() http.Handler {
 		r.Post("/scan", deviceHandler.ScanDevices)
 		r.Post("/device/select", deviceHandler.SelectDevice)
 		r.Get("/device/current", deviceHandler.GetCurrentDevice)
+
+		// Effect routes
+		r.Get("/effects", effectHandler.ListEffects)
+		r.Post("/effects", effectHandler.CreateEffect)
+		r.Delete("/effects/{id}", effectHandler.DeleteEffect)
+
+		// Twitch routes
+		r.Get("/twitch/config", twitchHandler.GetConfig)
+		r.Put("/twitch/config", twitchHandler.UpdateConfig)
+		r.Get("/twitch/status", twitchHandler.GetStatus)
+		r.Get("/twitch/commands", twitchHandler.GetAvailableCommands)
+		r.Get("/twitch/oauth", twitchHandler.GetOAuthURL)
 	})
 
 	// WebSocket route

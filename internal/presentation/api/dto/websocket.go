@@ -6,10 +6,12 @@ import "encoding/json"
 type MessageType string
 
 const (
-	MessageTypeCommand     MessageType = "command"
-	MessageTypeStateUpdate MessageType = "state_update"
-	MessageTypeError       MessageType = "error"
-	MessageTypeScanResult  MessageType = "scan_result"
+	MessageTypeCommand      MessageType = "command"
+	MessageTypeStateUpdate  MessageType = "state_update"
+	MessageTypeError        MessageType = "error"
+	MessageTypeScanResult   MessageType = "scan_result"
+	MessageTypeTwitchStatus MessageType = "twitch_status"
+	MessageTypeTwitchCommand MessageType = "twitch_command"
 )
 
 // CommandAction represents the action to perform
@@ -100,5 +102,35 @@ func NewScanResultMessage(devices []DeviceDTO) ScanResultMessage {
 	return ScanResultMessage{
 		Type:    MessageTypeScanResult,
 		Devices: devices,
+	}
+}
+
+// TwitchStatusMessage represents Twitch status update
+type TwitchStatusMessage struct {
+	Type   MessageType     `json:"type"`
+	Status TwitchStatusDTO `json:"status"`
+}
+
+// TwitchCommandMessage represents a Twitch command execution
+type TwitchCommandMessage struct {
+	Type     MessageType `json:"type"`
+	Username string      `json:"username"`
+	Command  string      `json:"command"`
+}
+
+// NewTwitchStatusMessage creates a Twitch status message
+func NewTwitchStatusMessage(status TwitchStatusDTO) TwitchStatusMessage {
+	return TwitchStatusMessage{
+		Type:   MessageTypeTwitchStatus,
+		Status: status,
+	}
+}
+
+// NewTwitchCommandMessage creates a Twitch command message
+func NewTwitchCommandMessage(username, command string) TwitchCommandMessage {
+	return TwitchCommandMessage{
+		Type:     MessageTypeTwitchCommand,
+		Username: username,
+		Command:  command,
 	}
 }

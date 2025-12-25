@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/codeneuss/lampcontrol/internal/application"
 	"github.com/codeneuss/lampcontrol/internal/infrastructure/bluetooth"
+	"github.com/codeneuss/lampcontrol/internal/infrastructure/storage"
 	"github.com/codeneuss/lampcontrol/internal/presentation/api"
 	"github.com/codeneuss/lampcontrol/internal/presentation/api/state"
 	"github.com/spf13/cobra"
@@ -31,11 +33,36 @@ var webCmd = &cobra.Command{
 		deviceService := application.NewDeviceService(adapter)
 		defer deviceService.DisconnectAll()
 
-		// Create server state
-		serverState := state.NewServerState(deviceService)
+		// Create effect storage
+		effectStorage, err := storage.NewEffectStorage()
+		if err != nil {
+			return fmt.Errorf("failed to initialize effect storage: %w", err)
+		}
+
+		// Create Twitch storage
+		twitchStorage, err := storage.NewTwitchStorage()
+		if err != nil {
+			return fmt.Errorf("failed to initialize twitch storage: %w", err)
+		}
+
+		// Create Twitch service
+		twitchService := application.NewTwitchService(deviceService, twitchStorage)
+
+		// Create server state (with Twitch service)
+		serverState := state.NewServerState(deviceService, twitchService)
 
 		// Create and start server
-		server := api.NewServer(webHost, webPort, serverState)
+		server := api.NewServer(webHost, webPort, serverState, effectStorage, twitchStorage)
+
+		// Auto-start Twitch if enabled
+		twitchConfig := twitchStorage.Get()
+		if twitchConfig.Enabled {
+			if err := twitchService.Start(context.Background()); err != nil {
+				log.Printf("Failed to auto-start Twitch integration: %v", err)
+			} else {
+				log.Printf("Twitch integration auto-started for channel: %s", twitchConfig.Channel)
+			}
+		}
 
 		log.Printf("Starting LampControl Web Server")
 		log.Printf("  Host: %s", webHost)
